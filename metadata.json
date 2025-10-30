@@ -1,0 +1,7 @@
+{
+  "name": "LinguaQuest",
+  "description": "Your fun, gamified journey to master a new language. Learn with interactive exercises, AI feedback, and track your progress every day.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
