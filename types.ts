@@ -9,7 +9,7 @@ export interface Lesson {
   title: string;
   description: string;
   emoji: string;
-  vocabulary: { english: string; french: string }[];
+  vocabulary: { english: string; french:string; phonetic?: string }[];
   feynmanPrompt: { concept: string; promptText: string };
 }
 
@@ -21,7 +21,7 @@ export interface Unit {
 export type GameState = 'not-started' | 'playing' | 'finished';
 
 // Updated screen type and added game types
-export type Screen = 'learn' | 'practice' | 'games' | 'profile';
+export type Screen = 'learn' | 'practice' | 'games' | 'review' | 'profile';
 
 export interface Flashcard {
   french: string;
@@ -32,17 +32,36 @@ export interface FlashcardGame {
   id: string;
   title: string;
   description: string;
+  type: 'flashcards';
   cards: Flashcard[];
 }
 
-export type QuestionType = 'multiple-choice-fr-en' | 'multiple-choice-en-fr' | 'listening';
+export interface MatchingPairGame {
+  id: string;
+  title: string;
+  description: string;
+  type: 'matching';
+  pairs: { french: string; english: string }[];
+}
+
+export type Game = FlashcardGame | MatchingPairGame;
+
+export type QuestionType = 'multiple-choice-fr-en' | 'multiple-choice-en-fr' | 'listening' | 'fill-in-the-blank';
+export type LessonStage = 'study' | 'quiz' | 'feynman' | 'complete' | 'failed';
 
 export interface Question {
   type: QuestionType;
-  prompt: string;
+  prompt: string | [string, string]; // e.g., "What is 'Hello'?" or ["Je ____ un garçon.", "suis"]
   options: string[];
   correctAnswer: string;
   audio?: string; // French word to play for listening questions
+}
+
+export interface PracticeScenario {
+    id: string;
+    title: string;
+    prompt: string;
+    emoji: string;
 }
 
 export interface AppContextType {
