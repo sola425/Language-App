@@ -1,8 +1,23 @@
-import React, { useState, useEffect, useMemo } from 'react';
+
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { MatchingPairGame } from '../types';
 import { ArrowLeftIcon } from './Icons';
 
 // --- UTILS & HELPERS ---
+// Sound effect for correct answers
+const CORRECT_ANSWER_SOUND_URL = 'https://cdn.pixabay.com/audio/2022/03/15/audio_22183389d2.mp3';
+const playSound = (soundUrl: string, volume: number = 0.5) => {
+    try {
+        const audio = new Audio(soundUrl);
+        audio.volume = volume;
+        audio.play().catch(error => {
+            console.warn(`Audio playback failed for ${soundUrl}. Error: ${error.message}`);
+        });
+    } catch (error) {
+        console.error(`Failed to create or play audio from ${soundUrl}.`, error);
+    }
+};
+
 function shuffleArray<T>(array: T[]): T[] {
     const newArray = [...array];
     for (let i = newArray.length - 1; i > 0; i--) {
@@ -38,7 +53,7 @@ export const MatchingPairGameScreen: React.FC<{ game: MatchingPairGame, onExit: 
 
     const isDone = useMemo(() => matchedPairs.length === game.pairs.length, [matchedPairs, game.pairs]);
 
-    const generateCards = () => {
+    const generateCards = useCallback(() => {
         const gameCards: Omit<Card, 'id'>[] = [];
         game.pairs.forEach(pair => {
             gameCards.push({ pairId: pair.french, content: pair.french });
@@ -48,11 +63,11 @@ export const MatchingPairGameScreen: React.FC<{ game: MatchingPairGame, onExit: 
         setFlippedIndices([]);
         setMatchedPairs([]);
         setJustMatchedPairId(null);
-    };
+    }, [game]);
     
     useEffect(() => {
         generateCards();
-    }, [game]);
+    }, [generateCards]);
 
     const handleCardClick = (index: number) => {
         if (isChecking || flippedIndices.includes(index) || matchedPairs.includes(cards[index].pairId)) {
@@ -69,6 +84,7 @@ export const MatchingPairGameScreen: React.FC<{ game: MatchingPairGame, onExit: 
             const secondCard = cards[secondIndex];
 
             if (firstCard.pairId === secondCard.pairId) {
+                playSound(CORRECT_ANSWER_SOUND_URL);
                 setMatchedPairs(prev => [...prev, firstCard.pairId]);
                 setFlippedIndices([]);
                 setJustMatchedPairId(firstCard.pairId);
@@ -130,7 +146,7 @@ export const MatchingPairGameScreen: React.FC<{ game: MatchingPairGame, onExit: 
                                 disabled={isMatched}
                                 className={`aspect-square rounded-lg flex items-center justify-center p-2 text-center font-semibold transition-all duration-300 shadow-sm
                                     ${(isFlipped || isMatched) ? 'bg-white text-text-primary' : 'bg-violet-600 text-violet-600'}
-                                    ${isMatched ? 'bg-green-600 border-green-700 text-white opacity-100 cursor-default' : ''}
+                                    ${isMatched ? 'bg-green-700 border-green-800 text-white opacity-100 cursor-default' : ''}
                                     ${isJustMatched ? 'match-success-anim' : ''}
                                 `}
                             >

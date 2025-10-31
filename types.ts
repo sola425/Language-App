@@ -57,12 +57,51 @@ export interface Question {
   audio?: string; // French word to play for listening questions
 }
 
-export interface PracticeScenario {
-    id: string;
-    title: string;
-    prompt: string;
-    emoji: string;
+// A single step in the new "Guided Mode"
+export interface ScenarioWalkthroughStep {
+  speaker: 'user' | 'model'; // Who is talking
+  line: {
+    french: string;
+    english: string;
+  };
 }
+
+// A "word typing" challenge
+export interface TypingChallenge {
+  type: 'typing';
+  english: string; // e.g., "I would like a coffee"
+  french: string;  // e.g., "Je voudrais un café"
+}
+
+// A "pronunciation" challenge
+export interface PronunciationChallenge {
+  type: 'pronunciation';
+  french: string;
+  english: string;
+  phonetic: string; // e.g., "/ʒə vu.dʁɛ ɛ̃ ka.fe/"
+}
+
+// A union type for the new warmup
+export type PracticeWarmupStep = TypingChallenge | PronunciationChallenge;
+
+
+// The new, upgraded Scenario definition
+export interface PracticeScenario {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  systemPrompt: string; // The specific system prompt for this scenario
+  media: {
+    backgroundImage: string; // e.g., '/images/scenarios/cafe.jpg'
+    ambientSound: string;  // e.g., '/audio/ambience/cafe-chatter.mp3'
+  };
+  // The new "Guided Mode" content
+  walkthrough: ScenarioWalkthroughStep[];
+  // The new "Warm-Up" challenges
+  warmup: PracticeWarmupStep[];
+}
+
 
 export interface AppContextType {
   xp: number;

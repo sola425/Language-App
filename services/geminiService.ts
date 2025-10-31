@@ -1,4 +1,3 @@
-
 import { GoogleGenAI, Type, Modality } from "@google/genai";
 import { TriviaQuestion } from '../types';
 
@@ -66,9 +65,10 @@ export async function getFeynmanExplanation(concept: string, userExplanation: st
 
 export async function getPronunciationAudio(text: string): Promise<string> {
     try {
+        // The TTS model works best with just the text to be spoken.
         const response = await ai.models.generateContent({
             model: "gemini-2.5-flash-preview-tts",
-            contents: [{ parts: [{ text }] }],
+            contents: [{ parts: [{ text: text }] }],
             config: {
                 responseModalities: [Modality.AUDIO],
                 speechConfig: {
@@ -83,6 +83,7 @@ export async function getPronunciationAudio(text: string): Promise<string> {
         if (base64Audio) {
             return base64Audio;
         } else {
+            console.error("Audio generation response did not contain audio data.", JSON.stringify(response));
             throw new Error("No audio data received from API.");
         }
     } catch (error) {
@@ -90,6 +91,72 @@ export async function getPronunciationAudio(text: string): Promise<string> {
         throw new Error("Failed to generate audio. Please try again.");
     }
 }
+
+async function blobToBase64(blob: Blob): Promise<string> {
+    const reader = new FileReader();
+    await new Promise((resolve, reject) => {
+        reader.onload = resolve;
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+    });
+    return (reader.result as string).split(',')[1];
+}
+
+export async function getPronunciationFeedback(
+    aiInstance: GoogleGenAI,
+    targetPhrase: string,
+    audioBlob: Blob
+): Promise<{ score: number; feedback: string }> {
+    try {
+        const base64Audio = await blobToBase64(audioBlob);
+
+        const audioPart = {
+            inlineData: {
+                mimeType: audioBlob.type,
+                data: base64Audio,
+            },
+        };
+
+        const prompt = `You are a friendly, expert French pronunciation coach. The user is attempting to say a specific target phrase.
+
+Target Phrase: "${targetPhrase}"
+
+Listen to the user's attached audio recording and provide:
+1.  A "Correctness" score from 0 to 100.
+2.  A one or two-sentence feedback report, focusing *only* on the most important error (or praising their accuracy). Be specific (e.g., "Your 'r' sound in 'voudrais' was perfect!" or "Great job! Try to link the words 'un' and 'café' more smoothly.").
+
+Format your response as:
+[SCORE]: 85
+[FEEDBACK]: Your pronunciation of 'Bonjour' was excellent, but the 'oi' sound in 'croissant' was a bit off. Try to make it sound more like 'wa'.`;
+
+        const textPart = { text: prompt };
+
+        const response = await aiInstance.models.generateContent({
+            model: 'gemini-2.5-pro',
+            contents: { parts: [textPart, audioPart] },
+        });
+
+        const responseText = response.text;
+
+        const scoreMatch = responseText.match(/\[SCORE\]:\s*(\d+)/);
+        const feedbackMatch = responseText.match(/\[FEEDBACK\]:\s*(.*)/s);
+
+        if (!scoreMatch || !feedbackMatch) {
+            console.error("Could not parse feedback from response:", responseText);
+            throw new Error("Could not parse feedback from Chloé.");
+        }
+
+        return {
+            score: parseInt(scoreMatch[1], 10),
+            feedback: feedbackMatch[1].trim(),
+        };
+
+    } catch (error) {
+        console.error("Error getting pronunciation feedback:", error);
+        throw new Error("Chloé is busy listening to someone else right now. Please try again.");
+    }
+}
+
 
 // Helper functions for audio decoding
 function decode(base64: string) {
