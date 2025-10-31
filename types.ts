@@ -44,7 +44,67 @@ export interface MatchingPairGame {
   pairs: { french: string; english: string }[];
 }
 
-export type Game = FlashcardGame | MatchingPairGame;
+// --- Boutique Dash Game Types ---
+export interface BoutiqueItem {
+  id: string;
+  name: string;
+  icon: string;
+}
+
+export interface CustomerOrder {
+  id: string;
+  frenchAudio: string;
+  items: { itemId: string; quantity: number }[];
+}
+
+export interface BoutiqueDashLevel {
+  id: string;
+  level: number;
+  title: string;
+  storeType: 'Bakery' | 'Market';
+  possibleItems: BoutiqueItem[];
+  customerOrders: CustomerOrder[];
+}
+
+export interface BoutiqueDashGame {
+  id: string;
+  type: 'boutique-dash';
+  level: BoutiqueDashLevel;
+}
+
+// --- Sentence Snap Game Types ---
+export type GrammaticalSlot = 'Subject' | 'Verb' | 'Object' | 'Adjective' | 'Conjunction';
+
+export interface SentenceSnapChunk {
+  word: string;
+  slot: GrammaticalSlot;
+}
+
+export interface SentenceSnapLevel {
+  id: string;
+  level: number;
+  englishHint: string;
+  slots: GrammaticalSlot[];
+  chunks: SentenceSnapChunk[];
+}
+
+export interface SentenceSnapGame {
+    id: string;
+    type: 'sentence-snap';
+    level: SentenceSnapLevel;
+}
+
+// --- Game Hub Types ---
+export interface GameInfo {
+  id: string;
+  title: string;
+  description: string;
+  type: 'boutique-dash' | 'sentence-snap';
+  illustration: string;
+}
+
+
+export type Game = FlashcardGame | MatchingPairGame | BoutiqueDashGame | SentenceSnapGame;
 
 export type QuestionType = 'multiple-choice-fr-en' | 'multiple-choice-en-fr' | 'listening' | 'fill-in-the-blank';
 export type LessonStage = 'study' | 'quiz' | 'feynman' | 'complete' | 'failed';

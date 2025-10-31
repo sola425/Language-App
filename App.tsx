@@ -1,11 +1,14 @@
 import React, { useState, useMemo, createContext, useContext, useEffect, useRef } from 'react';
 import { GoogleGenAI } from "@google/genai";
-import { UNITS, FLASHCARD_GAMES, MATCHING_GAMES, SCENARIOS } from './constants';
-import { Screen, Lesson, Game, PracticeScenario, AppContextType, FlashcardGame, MatchingPairGame, LessonStage } from './types';
+import { UNITS, SCENARIOS, GAMES_HUB_LIST, BOUTIQUE_DASH_LEVELS, SENTENCE_SNAP_LEVELS } from './constants';
+import { Screen, Lesson, Game, PracticeScenario, AppContextType, LessonStage, GameInfo } from './types';
 import { BookOpenIcon, UserIcon, TrophyIcon, SparklesIcon, HeartIcon, FireIcon, ArrowLeftIcon, StarIcon, SpeakerIcon, LoadingSpinner, CheckIcon, XIcon, LightbulbIcon, MicrophoneIcon, UserAvatar, ChloeAvatar } from './components/Icons';
 import { MatchingPairGameScreen } from './components/MatchingPairGameScreen';
 import { getPronunciationAudio, decodeAndPlayAudio, getFeynmanExplanation, getPronunciationFeedback } from './services/geminiService';
 import AmbientSoundPlayer from './components/AmbientSoundPlayer';
+import { BoutiqueDashGame } from './components/games/BoutiqueDashGame';
+import { SentenceSnapGame } from './components/games/SentenceSnapGame';
+
 
 // Sound effect for correct answers
 const CORRECT_ANSWER_SOUND_URL = 'https://cdn.pixabay.com/audio/2022/03/15/audio_22183389d2.mp3';
@@ -89,28 +92,31 @@ const LearnScreen: React.FC<{ onSelectLesson: (lesson: Lesson) => void }> = ({ o
 };
 
 
-// --- Games Screen ---
-const GamesScreen: React.FC<{ onSelectGame: (game: Game) => void }> = ({ onSelectGame }) => {
-    const allGames = [...FLASHCARD_GAMES, ...MATCHING_GAMES];
+// --- Game Hub Screen ---
+const GameHubScreen: React.FC<{ onSelectGame: (game: GameInfo) => void }> = ({ onSelectGame }) => {
     return (
         <div className="container mx-auto px-4 py-6">
-            <h1 className="text-2xl font-bold mb-6">Practice Games</h1>
-            <ul>
-                {allGames.map(game => (
-                    <li key={game.id} className="mb-3">
-                         <button onClick={() => onSelectGame(game)} className="w-full flex items-center p-4 bg-white rounded-xl shadow-sm border border-slate-200 hover:border-violet-400 hover:bg-violet-50 transition-all">
-                             <div className="text-3xl mr-4">{game.type === 'flashcards' ? '🃏' : '🧩'}</div>
-                            <div className="flex-1 text-left">
-                                <p className="font-bold text-text-primary">{game.title}</p>
-                                <p className="text-sm text-slate-500">{game.description}</p>
-                            </div>
-                        </button>
-                    </li>
+            <h1 className="text-2xl font-bold mb-6">Game Hub</h1>
+            <div className="flex overflow-x-auto space-x-4 pb-4 -mx-4 px-4">
+                {GAMES_HUB_LIST.map(game => (
+                    <div key={game.id} className="flex-shrink-0 w-64 bg-white rounded-xl shadow-lg border border-slate-200 flex flex-col">
+                        <div className="h-32 flex items-center justify-center text-6xl bg-violet-100 rounded-t-xl">
+                           {game.illustration}
+                        </div>
+                        <div className="p-4 flex flex-col flex-grow">
+                             <h2 className="font-bold text-lg text-text-primary">{game.title}</h2>
+                             <p className="text-sm text-slate-500 flex-grow mt-1">{game.description}</p>
+                             <button onClick={() => onSelectGame(game)} className="mt-4 w-full py-2 bg-violet-600 text-white font-bold rounded-lg hover:bg-violet-700 transition-transform hover:scale-105">
+                                Play
+                             </button>
+                        </div>
+                    </div>
                 ))}
-            </ul>
+            </div>
         </div>
     );
 };
+
 
 // --- Practice Screen ---
 const PracticeScreen: React.FC<{ onSelectScenario: (scenario: PracticeScenario) => void }> = ({ onSelectScenario }) => {
@@ -134,8 +140,8 @@ const PracticeScreen: React.FC<{ onSelectScenario: (scenario: PracticeScenario) 
     );
 }
 
-// --- Flashcard Game Screen ---
-const FlashcardGameScreen: React.FC<{ game: FlashcardGame, onExit: () => void }> = ({ game, onExit }) => {
+// --- Flashcard Game Screen (Kept for compatibility, but not in Hub) ---
+const FlashcardGameScreen: React.FC<{ game: any, onExit: () => void }> = ({ game, onExit }) => {
     const [currentIndex, setCurrentIndex] = useState(0);
     const [isFlipped, setIsFlipped] = useState(false);
     const [playingAudio, setPlayingAudio] = useState(false);
@@ -944,11 +950,24 @@ const App: React.FC = () => {
     
     const handleSelectLesson = (lesson: Lesson) => {
         setCurrentLesson(lesson);
-        setCurrentView('learn'); // This seems redundant, but ensures we are on the 'learn' tab logically
+        setCurrentView('learn');
     };
     
-    const handleSelectGame = (game: Game) => {
-        setCurrentGame(game);
+    const handleSelectGame = (gameInfo: GameInfo) => {
+        if (gameInfo.type === 'boutique-dash') {
+            setCurrentGame({
+                id: gameInfo.id,
+                type: 'boutique-dash',
+                level: BOUTIQUE_DASH_LEVELS[0] // Start with level 1
+            });
+        }
+        if (gameInfo.type === 'sentence-snap') {
+             setCurrentGame({
+                id: gameInfo.id,
+                type: 'sentence-snap',
+                level: SENTENCE_SNAP_LEVELS[0] // Start with level 1
+            });
+        }
         setCurrentView('games');
     };
 
@@ -968,11 +987,17 @@ const App: React.FC = () => {
             return <LessonScreen lesson={currentLesson} onExit={exitSubView} />;
         }
         if (currentGame) {
-            if (currentGame.type === 'flashcards') {
-                return <FlashcardGameScreen game={currentGame} onExit={exitSubView} />;
-            }
-            if (currentGame.type === 'matching') {
-                return <MatchingPairGameScreen game={currentGame} onExit={exitSubView} />;
+            switch (currentGame.type) {
+                case 'flashcards':
+                    return <FlashcardGameScreen game={currentGame} onExit={exitSubView} />;
+                case 'matching':
+                    return <MatchingPairGameScreen game={currentGame} onExit={exitSubView} />;
+                case 'boutique-dash':
+                    return <BoutiqueDashGame game={currentGame} onExit={exitSubView} />;
+                case 'sentence-snap':
+                    return <SentenceSnapGame game={currentGame} onExit={exitSubView} />;
+                default:
+                    return null;
             }
         }
         if (currentScenario) {
@@ -985,7 +1010,7 @@ const App: React.FC = () => {
             case 'practice':
                 return <PracticeScreen onSelectScenario={handleSelectScenario} />;
             case 'games':
-                return <GamesScreen onSelectGame={handleSelectGame} />;
+                return <GameHubScreen onSelectGame={handleSelectGame} />;
             case 'profile':
                 return <ProfileScreen />;
             default:
